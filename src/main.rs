@@ -4,7 +4,7 @@ use anyhow::{Error, Result};
 use clap::{Parser, Subcommand};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{error, info, LevelFilter};
-use serialport::available_ports;
+use serialport::{available_ports, FlowControl};
 use simplelog::{ColorChoice, Config, SimpleLogger, TermLogger, TerminalMode};
 use std::env;
 use std::path::PathBuf;
@@ -23,6 +23,18 @@ fn format_bytes(size: u32) -> String {
         size /= 1024.0;
     }
     format!("{size:.1} TB")
+}
+
+fn parse_flow_control(s: &str) -> Result<FlowControl, String> {
+    match s.to_lowercase().as_str() {
+        "none"                    => Ok(FlowControl::None),
+        "software" | "xon/xoff" | "xonxoff" => Ok(FlowControl::Software),
+        "hardware" | "rts/cts"  | "rtscts"  => Ok(FlowControl::Hardware),
+        _ => Err(format!(
+            "invalid value: '{}'. Use: none, software (xon/xoff), hardware (rts/cts)",
+            s
+        )),
+    }
 }
 
 #[derive(Parser)]
@@ -68,6 +80,10 @@ struct Cli {
     #[arg(short, long, default_value_t = 115_200)]
     baudrate: u32,
 
+    /// flow control: none, software (xon/xoff), hardware (rts/cts)
+    #[arg(long, default_value = "none", value_parser = parse_flow_control)]
+    flow_control: FlowControl,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -81,6 +97,7 @@ impl From<&Cli> for SerialSpecs {
             linelength: cli.linelength,
             mtu: cli.mtu,
             baudrate: cli.baudrate,
+            flow_control: cli.flow_control,
         }
     }
 }

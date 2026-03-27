@@ -7,7 +7,7 @@ use crc16::*;
 use lazy_static::lazy_static;
 use log::debug;
 use rand::{thread_rng, Rng};
-use serialport::SerialPort;
+use serialport::{FlowControl, SerialPort};
 use std::cmp::min;
 use std::io::Cursor;
 use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
@@ -69,6 +69,7 @@ pub struct SerialSpecs {
     pub linelength: usize,
     pub mtu: usize,
     pub baudrate: u32,
+    pub flow_control: FlowControl,
 }
 
 /// UDP connection specification
@@ -109,6 +110,7 @@ impl SerialTransport {
                 linelength: specs.linelength,
                 mtu: specs.mtu,
                 baudrate: specs.baudrate,
+                flow_control: specs.flow_control,
             },
         })
     }
@@ -391,6 +393,7 @@ pub fn open_port(specs: &SerialSpecs) -> Result<Box<dyn SerialPort>, Error> {
     } else {
         serialport::new(&specs.device, specs.baudrate)
             .timeout(Duration::from_secs(specs.initial_timeout_s as u64))
+            .flow_control(specs.flow_control)
             .open()
             .with_context(|| format!("failed to open serial port {}", &specs.device))
     }
