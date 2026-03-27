@@ -2,7 +2,7 @@
 name = "mcumgr-client"
 version = "0.0.9"
 edition = "2021"
-repository = "https://github.com/vouch-opensource/mcumgr-client/"
+repository = "https://github.com/Tib0ww/mcumgr_client_custom/"
 license = "Apache-2.0"
 description = "Run MCUmgr commands for uploading firmware updates from a PC to an embedded device"
 include = [
