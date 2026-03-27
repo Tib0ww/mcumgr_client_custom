@@ -116,6 +116,15 @@ impl SerialTransport {
     }
 }
 
+/// Automatically deassert DTR when SerialTransport is dropped
+impl Drop for SerialTransport {
+    fn drop(&mut self) {
+        if let Err(e) = self.port.write_dtr(false) {
+            debug!("Failed to deassert DTR on port close: {}", e);
+        }
+    }
+}
+
 impl Transport for SerialTransport {
     fn transceive(
         &mut self,
@@ -391,11 +400,19 @@ pub fn open_port(specs: &SerialSpecs) -> Result<Box<dyn SerialPort>, Error> {
     if specs.device.to_lowercase() == "test" {
         Ok(Box::new(TestSerialPort::new()))
     } else {
-        serialport::new(&specs.device, specs.baudrate)
+        let mut port = serialport::new(&specs.device, specs.baudrate)
             .timeout(Duration::from_secs(specs.initial_timeout_s as u64))
             .flow_control(specs.flow_control)
             .open()
-            .with_context(|| format!("failed to open serial port {}", &specs.device))
+            .with_context(|| format!("failed to open serial port {}", &specs.device))?;
+
+        // Assert DTR to signal to the device that the host is ready
+        port.write_dtr(true)
+            .with_context(|| "failed to assert DTR on serial port")?;
+
+        debug!("DTR asserted on port {}", specs.device);
+
+        Ok(port)
     }
 }
 
